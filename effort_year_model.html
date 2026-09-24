@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Effort Year</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.0/plotly.min.js"></script>
+<style>
+:root{
+  --bg:#f7f6f2; --surface:#fcfcfb; --ink:#161614; --ink-2:#52514e; --ink-3:#8a8984;
+  --rule:#e4e2dc; --grid:#ecebe7;
+  --blue:#2a78d6; --orange:#eb6834; --aqua:#1baf7a; --violet:#4a3aa7; --red:#e34948;
+  --field:42,120,214;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121211; --surface:#1a1a19; --ink:#f4f3ee; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+    --rule:#2d2d2a; --grid:#262624;
+    --blue:#3987e5; --orange:#d95926; --aqua:#199e70; --violet:#9085e9; --red:#e66767;
+    --field:95,160,240; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121211; --surface:#1a1a19; --ink:#f4f3ee; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+  --rule:#2d2d2a; --grid:#262624;
+  --blue:#3987e5; --orange:#d95926; --aqua:#199e70; --violet:#9085e9; --red:#e66767;
+  --field:95,160,240; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+h1,h2,h3,.ui{font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+header{padding:56px 0 28px}
+.kicker{font:600 12px/1 ui-sans-serif,-apple-system,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--orange)}
+h1{font-size:clamp(30px,5vw,50px);line-height:1.05;margin:14px 0 14px;letter-spacing:-.02em;font-weight:700}
+.lede{font-size:18px;color:var(--ink-2);max-width:720px;margin:0}
+h2{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+.num{font:600 12px/1 ui-sans-serif,-apple-system,sans-serif;color:var(--ink-3);letter-spacing:.08em}
+section{padding:40px 0;border-top:1px solid var(--rule)}
+.sub{color:var(--ink-2);max-width:760px;margin:6px 0 18px}
+.eq{font-family:"STIX Two Math","Cambria Math",Georgia,serif;font-style:italic;background:var(--surface);
+  border:1px solid var(--rule);border-radius:10px;padding:10px 14px;display:inline-block;margin:4px 0 14px;overflow-x:auto;max-width:100%}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+@media (max-width:820px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:14px 16px}
+.tile .lab{font:500 12px/1.3 ui-sans-serif,-apple-system,sans-serif;color:var(--ink-2)}
+.tile .val{font:700 30px/1.1 ui-sans-serif,-apple-system,sans-serif;margin-top:6px;font-variant-numeric:tabular-nums}
+.tile .note{font:12px/1.35 ui-sans-serif,-apple-system,sans-serif;color:var(--ink-3);margin-top:4px}
+.badge{display:inline-flex;align-items:center;gap:6px;font:600 12px/1 ui-sans-serif,sans-serif;padding:5px 9px;border-radius:99px;border:1px solid var(--rule)}
+
+/* controls */
+.controls{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);padding:10px 0}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.ctl label{font:500 12.5px/1.2 ui-sans-serif,-apple-system,sans-serif;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.ctl output{font:600 12.5px ui-sans-serif,sans-serif;color:var(--ink);min-width:34px;font-variant-numeric:tabular-nums}
+.ctl input[type=range]{width:120px;accent-color:var(--blue)}
+button{font:600 12.5px ui-sans-serif,-apple-system,sans-serif;background:var(--surface);color:var(--ink);
+  border:1px solid var(--rule);border-radius:99px;padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--ink-3)}
+button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* causal loop diagram */
+#cld{width:100%;height:auto;display:block}
+#cld .edge{fill:none;stroke:var(--ink-3);stroke-width:1.6;transition:opacity .25s}
+#cld .pol{font:700 13px ui-sans-serif,sans-serif;text-anchor:middle;dominant-baseline:central}
+#cld .polbg{fill:var(--surface);stroke:var(--rule)}
+#cld .node circle{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+#cld .node .sym{font:700 20px "STIX Two Math",Georgia,serif;font-style:italic;text-anchor:middle;fill:var(--ink)}
+#cld .node .nm{font:500 10.5px ui-sans-serif,sans-serif;text-anchor:middle;fill:var(--ink-2)}
+#cld .pulse{fill:var(--orange)}
+#cld .g{transition:opacity .25s}
+#cld.focus .g{opacity:.12}
+#cld.focus .g.hl{opacity:1}
+#cld.focus .g.hl .edge{stroke:var(--orange);stroke-width:2.6}
+.looptext{min-height:48px;font-size:15px;color:var(--ink-2);margin-top:8px}
+
+/* phase portrait */
+.pp{position:relative}
+#phase{width:100%;height:460px;display:block;border-radius:10px;background:var(--surface);cursor:crosshair}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font:12px ui-sans-serif,sans-serif;color:var(--ink-2);margin-top:10px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.legend .dot{width:10px;height:10px;border-radius:50%}
+.plot{width:100%;height:440px}
+.plot.tall{height:540px}
+blockquote{margin:0;padding:22px 26px;border-left:3px solid var(--orange);background:var(--surface);border-radius:0 14px 14px 0;font-size:20px;line-height:1.5}
+footer{padding:30px 0 60px;color:var(--ink-3);font:12.5px/1.5 ui-sans-serif,sans-serif}
+table.params{border-collapse:collapse;font:13px ui-sans-serif,sans-serif;width:100%}
+table.params td,table.params th{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:left}
+.scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="kicker">A dynamical model · frontier drift · re-entry penalty · guilt loop</div>
+  <h1>Wasted 8 years, worked hard for 1.<br>Can the goal still be reached?</h1>
+  <p class="lede">An interactive walk through the equations. The state is <i>x(t) = (A, R, S, G)</i>: your legible output, the field's moving frontier, structural support, and guilt. Move the sliders and every chart re-solves the model.</p>
+  <div class="tiles" id="tiles"></div>
+</header>
+</div>
+
+<div class="controls"><div class="wrap ctl ui" id="controls"></div></div>
+
+<div class="wrap">
+
+<!-- 1 causal loop diagram -->
+<section>
+  <div class="num">01</div>
+  <h2>The feedback structure</h2>
+  <p class="sub">Every arrow is a term in the equations. <b>+</b> means "more of this gives more of that", <b>−</b> means less. Pulses show the direction of influence. Pick a loop to see how it runs.</p>
+  <div class="ctl" id="loopbtns" style="margin-bottom:10px"></div>
+  <div class="card"><svg id="cld" viewBox="0 0 960 560" role="img" aria-label="Causal loop diagram of the effort model"></svg></div>
+  <div class="looptext" id="looptext"></div>
+</section>
+
+<!-- 2 wasted years -->
+<section>
+  <div class="num">02</div>
+  <h2>The wasted years: the frontier runs away</h2>
+  <p class="sub">While effort is low, output grows slowly and decays, but the field keeps advancing. The gap when effort begins is</p>
+  <div class="eq">d₀ = R₀ − A₀ = (ζ/g<sub>R</sub>)(e<sup>g<sub>R</sub>h</sup> − 1) − (βφ̄/δ<sub>A</sub>)(1 − e<sup>−δ<sub>A</sub>h</sup>)</div>
+  <div class="card"><div id="pre" class="plot"></div></div>
+</section>
+
+<!-- 3 3D surface -->
+<section>
+  <div class="num">03</div>
+  <h2>The race ratio Π: can maximum effort even keep pace?</h2>
+  <p class="sub">Π compares your maximum output rate <i>a</i> with the effective drift of the field. Below the orange plane (Π &lt; 1) the gap widens <i>even at full effort, zero guilt and full capacity</i>. The white line is the critical history length h<sub>c</sub>. Drag to rotate.</p>
+  <div class="eq">Π(h) = Π₀ / [1 + (1 + δ<sub>A</sub>/g<sub>R</sub>)(e<sup>g<sub>R</sub>h</sup> − 1)],&nbsp;&nbsp; h<sub>c</sub> = (1/g<sub>R</sub>) ln[1 + (Π₀ − 1) g<sub>R</sub>/(g<sub>R</sub> + δ<sub>A</sub>)]</div>
+  <div class="card"><div id="surf" class="plot tall"></div></div>
+</section>
+
+<!-- 4 phase portrait -->
+<section>
+  <div class="num">04</div>
+  <h2>The effort year as a flow: gap vs. guilt</h2>
+  <p class="sub">Each particle is a possible version of you, pushed by the equations. Gap <i>c</i> on the horizontal axis, guilt <i>G</i> on the vertical. <b>Click anywhere</b> to launch a trajectory from that point.</p>
+  <div class="eq">ċ = a κ(c) e<sup>−μG</sup> − δ<sub>A</sub>c − ζ<sub>eff</sub>&nbsp;&nbsp;&nbsp; Ġ = g<sub>w</sub>(1 − n₀e<sup>−μG</sup>) + g<sub>e</sub>(1 − Ê(c)) − g<sub>K</sub>G</div>
+  <div class="card pp">
+    <canvas id="phase"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>ċ = 0 (gap holds steady)</span>
+      <span><i style="background:var(--orange)"></i>Ġ = 0 (guilt holds steady)</span>
+      <span><i class="dot" style="background:var(--aqua)"></i>stable equilibrium</span>
+      <span><i class="dot" style="border:2px solid var(--red);background:transparent"></i>saddle (tipping point)</span>
+      <span><i style="background:var(--ink)"></i>your trajectories</span>
+      <button id="clearTraj" style="margin-left:auto">Clear trajectories</button>
+    </div>
+  </div>
+  <p class="sub" id="fpText" style="margin-top:14px"></p>
+</section>
+
+<!-- 5 bifurcation -->
+<section>
+  <div class="num">05</div>
+  <h2>How the wasted years erase the good future</h2>
+  <p class="sub">The equilibria of the effort-year system as the length of history <i>h</i> grows. With a short history there are two futures, "catching up" and "the guilt trap", divided by a saddle. As the years pass, the good equilibrium and the saddle collide and disappear. This is a <b>saddle-node bifurcation</b>.</p>
+  <div class="card"><div id="bif" class="plot"></div></div>
+</section>
+
+<!-- 6 3D trajectories -->
+<section>
+  <div class="num">06</div>
+  <h2>Same effort, different starting guilt</h2>
+  <p class="sub">Trajectories through (time, gap, guilt) that start at the same gap d₀ with different initial guilt. Darker lines start with more guilt.</p>
+  <div class="ctl" style="margin-bottom:10px"><button id="play3d">▶ Play</button></div>
+  <div class="card"><div id="traj3d" class="plot tall"></div></div>
+</section>
+
+<!-- 7 race -->
+<section>
+  <div class="num">07</div>
+  <h2>The race: output vs. the frontier</h2>
+  <p class="sub">The full model, run through the wasted years (grey) and then the effort years. The frontier keeps compounding at rate g<sub>R</sub>.</p>
+  <div class="ctl" style="margin-bottom:10px"><button id="playRace">▶ Play</button>
+    <label>starting guilt G₀ <input type="range" id="g0" min="0" max="4" step="0.1" value="1.5"><output id="g0o">1.5</output></label></div>
+  <div class="card"><div id="race" class="plot"></div></div>
+</section>
+
+<!-- 8 controllability -->
+<section>
+  <div class="num">08</div>
+  <h2>Something effort cannot touch</h2>
+  <p class="sub">In matrix form, effort <i>u<sub>A</sub></i> enters only the output equation. The controllability matrix has rank 1 &lt; 2: <b>no amount of effort changes the frontier R</b>. The only lever is the horizon T. The feasibility ratio ρ(T) is the effort needed to reach parity, divided by your budget. Parity is reachable only if ρ(T) ≤ 1 at some T. The best horizon is near T* = 1/g<sub>R</sub>.</p>
+  <div class="eq">d/dt (A, R)ᵀ = [[−δ<sub>A</sub>, 0],[0, g<sub>R</sub>]] (A, R)ᵀ + (b, 0)ᵀ u<sub>A</sub> + (0, ζ)ᵀ,&nbsp;&nbsp; 𝒞 = [B AB] = [[b, −δ<sub>A</sub>b],[0, 0]]</div>
+  <div class="card"><div id="ctrl" class="plot"></div></div>
+</section>
+
+<!-- 9 summary -->
+<section>
+  <div class="num">09</div>
+  <h2>What the model says</h2>
+  <blockquote>"It'll be impossible for the student to ever match the output to their input. But as long as they continue to go on without any guilt, they can work the best that day, and that's a great output toward that goal."</blockquote>
+  <p class="sub" style="margin-top:18px">The maths agrees on both counts. Section 08 shows parity with the frontier may be unreachable. Sections 04 to 06 show that <b>guilt is the one lever inside your control</b>: the same hours give a smaller gap when G is low. The trap is a place in the flow, not a verdict.</p>
+  <details class="ui" style="margin-top:16px"><summary style="cursor:pointer;font-weight:600">Parameter values used</summary>
+    <div class="scroll"><table class="params" id="ptable"></table></div></details>
+</section>
+
+<footer>Built from the handwritten notes "Wasted 8 years, worked hard 1 year, can I reach my goal". Parameter values are illustrative, chosen so the default settings reproduce the notes' conclusions.</footer>
+</div>
+
+<script>
+/* ============================================================ model */
+const P = {
+  h:8, a:4, mu:0.4, theta:0.5, ge:0.8,               // slider-controlled
+  zeta:1, gR:0.1, dA:0.15, eh:3, gw:0.3, n0:0.8, gK:0.5, w:1, bphi:0.5
+};
+const SLIDERS = [
+  {k:"h",     lab:"wasted years h",           min:0,  max:15, step:0.5},
+  {k:"a",     lab:"max output rate a",        min:1,  max:10, step:0.1},
+  {k:"mu",    lab:"guilt → lost days μ",      min:0,  max:1,  step:0.05},
+  {k:"theta", lab:"re-entry penalty θ",       min:0,  max:0.9,step:0.05},
+  {k:"ge",    lab:"falling behind → guilt g<sub>e</sub>", min:0, max:2, step:0.05},
+];
+const PARAM_DOC = {
+  h:"years of history before the effort year", a:"max output rate: γπφ₀H(1−c₀)n₀",
+  mu:"how strongly guilt removes usable days", theta:"re-entry penalty strength, κ = 1 − θE(d)",
+  ge:"how much falling behind feeds guilt", zeta:"field advancement rate ζ", gR:"frontier compounding rate g_R",
+  dA:"decay rate of old output δ_A", eh:"half-saturation of the deficit penalty e_h", gw:"guilt from wasted days g_w",
+  n0:"baseline fraction of usable days n₀", gK:"natural guilt decay g_K", w:"width of the self-esteem curve Ê(c)",
+  bphi:"output rate during the wasted years βφ̄"
+};
+
+const derived = p => {
+  const R0 = p.zeta/p.gR*(Math.exp(p.gR*p.h)-1);
+  const A0 = p.bphi/p.dA*(1-Math.exp(-p.dA*p.h));
+  const zeff = p.zeta + (p.gR+p.dA)*R0;
+  const Pi0 = p.a/p.zeta;
+  const Pi = Pi0/(1+(1+p.dA/p.gR)*(Math.exp(p.gR*p.h)-1));
+  const hc = Pi0>1 ? Math.log(1+(Pi0-1)*p.gR/(p.gR+p.dA))/p.gR : 0;
+  return {R0, A0, d0:R0-A0, zeff, Pi0, Pi, hc};
+};
+const kappa = (c,p) => { const d=Math.max(-c,0); return 1 - p.theta*d/(d+p.eh); };
+const Ehat  = (c,p) => 1/(1+Math.exp(-c/p.w));
+
+// effort-year system in (c, G), frontier frozen at R0 (notes, p.4)
+function field(c,G,p,D){
+  return [ p.a*kappa(c,p)*Math.exp(-p.mu*G) - p.dA*c - D.zeff,
+           p.gw*(1-p.n0*Math.exp(-p.mu*G)) + p.ge*(1-Ehat(c,p)) - p.gK*G ];
+}
+function jac(c,G,p,D){
+  const e=1e-5, f1=field(c+e,G,p,D), f0=field(c-e,G,p,D), g1=field(c,G+e,p,D), g0=field(c,G-e,p,D);
+  return [[(f1[0]-f0[0])/2/e,(g1[0]-g0[0])/2/e],[(f1[1]-f0[1])/2/e,(g1[1]-g0[1])/2/e]];
+}
+function fixedPoints(p,D){
+  const out=[];
+  for(let c0=-60;c0<=30;c0+=4) for(let G0=0;G0<=8;G0+=1){
+    let c=c0,G=G0,ok=false;
+    for(let i=0;i<60;i++){
+      const f=field(c,G,p,D), J=jac(c,G,p,D), det=J[0][0]*J[1][1]-J[0][1]*J[1][0];
+      if(Math.abs(det)<1e-12) break;
+      const dc=( J[1][1]*f[0]-J[0][1]*f[1])/det, dG=(-J[1][0]*f[0]+J[0][0]*f[1])/det;
+      c-=dc; G-=dG;
+      if(!isFinite(c)||!isFinite(G)) break;
+      if(Math.abs(dc)+Math.abs(dG)<1e-9){ok=true;break;}
+    }
+    if(!ok||G<-1e-6) continue;
+    if(out.some(q=>Math.abs(q.c-c)<1e-3&&Math.abs(q.G-G)<1e-3)) continue;
+    const J=jac(c,G,p,D), tr=J[0][0]+J[1][1], det=J[0][0]*J[1][1]-J[0][1]*J[1][0];
+    const type = det<0 ? "saddle" : (tr<0 ? "stable" : "unstable");
+    out.push({c,G,type,tr,det});
+  }
+  return out.sort((x,y)=>x.c-y.c);
+}
+function rk4(f,x,dt){
+  const k1=f(x), k2=f(x.map((v,i)=>v+dt/2*k1[i])), k3=f(x.map((v,i)=>v+dt/2*k2[i])), k4=f(x.map((v,i)=>v+dt*k3[i]));
+  return x.map((v,i)=>v+dt/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+}
+// full model for the race: A, R, G with c = A − R, R keeps compounding
+function simulateRace(p,D,G0,T){
+  const pts=[]; const dt=0.02;
+  // wasted years (low output, no guilt dynamics shown)
+  for(let t=0;t<=p.h+1e-9;t+=dt){
+    pts.push({t:t-p.h, R:p.zeta/p.gR*(Math.exp(p.gR*t)-1), A:p.bphi/p.dA*(1-Math.exp(-p.dA*t)), G:null});
+  }
+  let x=[D.A0, D.R0, G0];
+  const f = ([A,R,G]) => { const c=A-R;
+    return [ p.a*kappa(c,p)*Math.exp(-p.mu*G) - p.dA*A,
+             p.zeta + p.gR*R,
+             p.gw*(1-p.n0*Math.exp(-p.mu*G)) + p.ge*(1-Ehat(c,p)) - p.gK*G ]; };
+  for(let t=0;t<=T+1e-9;t+=dt){ pts.push({t, A:x[0], R:x[1], G:x[2]}); x=rk4(f,x,dt); x[2]=Math.max(x[2],0); }
+  return pts;
+}
+
+/* ============================================================ theme helpers */
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const baseLayout = (extra={}) => Object.assign({
+  paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"rgba(0,0,0,0)",
+  font:{family:"ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif",size:12,color:css("--ink-2")},
+  margin:{l:56,r:20,t:16,b:48}, hovermode:"x unified",
+  hoverlabel:{bgcolor:css("--surface"),bordercolor:css("--rule"),font:{color:css("--ink")}},
+  xaxis:{gridcolor:css("--grid"),zerolinecolor:css("--rule"),linecolor:css("--rule")},
+  yaxis:{gridcolor:css("--grid"),zerolinecolor:css("--rule"),linecolor:css("--rule")},
+  legend:{orientation:"h",y:1.08,x:0}, showlegend:true
+}, extra);
+const CFG = {displayModeBar:false, responsive:true};
+const fmt = (v,d=2) => (Math.abs(v)>=100? v.toFixed(0) : v.toFixed(d));
+
+/* ============================================================ controls */
+const ctl = document.getElementById("controls");
+SLIDERS.forEach(s=>{
+  const l=document.createElement("label");
+  l.innerHTML=`${s.lab} <input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${P[s.k]}" data-k="${s.k}"><output>${P[s.k]}</output>`;
+  ctl.appendChild(l);
+});
+const reset=document.createElement("button"); reset.textContent="Reset"; ctl.appendChild(reset);
+const DEFAULTS={...P};
+let pending=null;
+ctl.addEventListener("input",e=>{
+  const k=e.target.dataset.k; if(!k) return;
+  P[k]=+e.target.value; e.target.nextElementSibling.textContent=P[k];
+  if(pending) cancelAnimationFrame(pending);
+  pending=requestAnimationFrame(()=>renderAll(false));
+});
+reset.onclick=()=>{ Object.assign(P,DEFAULTS);
+  ctl.querySelectorAll("input").forEach(i=>{i.value=P[i.dataset.k]; i.nextElementSibling.textContent=P[i.dataset.k];});
+  renderAll(true); };
+
+/* ============================================================ tiles */
+function renderTiles(D,fps){
+  const good = fps.some(f=>f.type==="stable"&&f.c>0);
+  const verdict = D.Pi>=1 ? (good?"Catch-up is possible":"Catch-up is possible, but fragile") : "Gap widens even at full effort";
+  document.getElementById("tiles").innerHTML = `
+    <div class="tile"><div class="lab">Gap when effort begins, d₀</div><div class="val">${fmt(D.d0,1)}</div><div class="note">frontier R₀ = ${fmt(D.R0,1)}, output A₀ = ${fmt(D.A0,1)}</div></div>
+    <div class="tile"><div class="lab">Race ratio Π (need ≥ 1)</div><div class="val" style="color:${D.Pi>=1?"var(--aqua)":"var(--orange)"}">${D.Pi.toFixed(2)}</div><div class="note">${verdict}</div></div>
+    <div class="tile"><div class="lab">Critical history length h<sub>c</sub></div><div class="val">${D.hc.toFixed(1)} yr</div><div class="note">you have h = ${P.h} yr ${P.h>D.hc?"(past it)":"(still inside)"}</div></div>
+    <div class="tile"><div class="lab">Possible futures</div><div class="val">${good?"two":"one"}</div><div class="note">${good?"a catch-up state and a guilt trap, split by a saddle":"only the guilt trap remains"}</div></div>`;
+}
+
+/* ============================================================ 1. causal loop diagram */
+const NODES = {
+  z:{x:90, y:110, s:"ζ", n:"field advance"},
+  R:{x:290,y:110, s:"R", n:"frontier"},
+  A:{x:690,y:110, s:"A", n:"output"},
+  S:{x:880,y:110, s:"S", n:"structure"},
+  c:{x:490,y:280, s:"c", n:"gap A − R"},
+  k:{x:690,y:280, s:"κ", n:"re-entry"},
+  u:{x:880,y:280, s:"u", n:"effort hours"},
+  G:{x:490,y:450, s:"G", n:"guilt"},
+  n:{x:690,y:450, s:"n", n:"usable days"},
+  L:{x:880,y:450, s:"L", n:"capacity"},
+};
+const EDGES = [
+  {id:"zR",f:"z",t:"R",s:"+",loops:["R1"]},
+  {id:"RR",f:"R",t:"R",s:"+",self:"up",loops:["R1"],lab:"g_R"},
+  {id:"Rc",f:"R",t:"c",s:"−",loops:["R1"]},
+  {id:"Ac",f:"A",t:"c",s:"+",loops:["R2","R3"]},
+  {id:"AA",f:"A",t:"A",s:"−",self:"up",loops:["B1"],lab:"δ_A"},
+  {id:"ck",f:"c",t:"k",s:"+",loops:["R3"]},
+  {id:"kA",f:"k",t:"A",s:"+",loops:["R3"]},
+  {id:"cG",f:"c",t:"G",s:"−",loops:["R2"]},
+  {id:"GG",f:"G",t:"G",s:"−",self:"down",loops:["B2"],lab:"g_K"},
+  {id:"Gn",f:"G",t:"n",s:"−",loops:["R2"]},
+  {id:"nL",f:"n",t:"L",s:"+",loops:["R2"]},
+  {id:"Lu",f:"L",t:"u",s:"+",loops:["R2","S1"]},
+  {id:"uA",f:"u",t:"A",s:"+",loops:["R2"]},
+  {id:"uS",f:"u",t:"S",s:"+",loops:["S1"]},
+  {id:"SA",f:"S",t:"A",s:"+",loops:["S1"]},
+];
+const LOOPS = {
+  R1:{name:"R1 · Frontier drift", kind:"reinforcing",
+      txt:"The field compounds on itself (Ṙ = ζ + g<sub>R</sub>R). No term in your control appears here, so the frontier keeps running away whatever you do."},
+  R2:{name:"R2 · Guilt spiral", kind:"reinforcing",
+      txt:"Falling behind raises guilt → guilt removes usable days n(G) = n₀e<sup>−μG</sup> → capacity L(G) shrinks → fewer effort hours → less output → the gap grows. Signs along the loop: (−)(−)(+)(+)(+)(+) = <b>+</b>, a vicious circle."},
+  R3:{name:"R3 · Re-entry penalty", kind:"reinforcing",
+      txt:"The further behind you are, the less each hour is worth: κ(c) = 1 − θE(d). A bigger deficit makes catching up slower, so the deficit feeds itself."},
+  B1:{name:"B1 · Output decays", kind:"balancing",
+      txt:"Old output loses relevance at rate δ<sub>A</sub>. Past work does not count forever."},
+  B2:{name:"B2 · Guilt fades", kind:"balancing",
+      txt:"Guilt decays naturally at rate g<sub>K</sub>. This is the brake on the spiral. When g<sub>K</sub> beats g<sub>w</sub>μn, guilt is self-limiting (J₂₂ &lt; 0)."},
+  S1:{name:"S · Building structure", kind:"reinforcing",
+      txt:"Hours spent on support build S, which raises the capability multiplier φ(S) = S/(S+S½). Structure makes future hours more productive."},
+};
+function drawCLD(){
+  const svg=document.getElementById("cld"); const R=40; let h="";
+  h+=`<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker>
+      <marker id="arrh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--orange)"/></marker></defs>`;
+  EDGES.forEach((e,i)=>{
+    const a=NODES[e.f], b=NODES[e.t]; let d, mx, my;
+    if(e.self){
+      const dir = e.self==="up"?-1:1;
+      const x0=a.x-18, y0=a.y+dir*(R-4), x1=a.x+18;
+      d=`M${x0},${y0} C${a.x-60},${a.y+dir*110} ${a.x+60},${a.y+dir*110} ${x1},${y0}`;
+      mx=a.x; my=a.y+dir*84;
+    } else {
+      const dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy), ux=dx/L, uy=dy/L;
+      const sx=a.x+ux*R, sy=a.y+uy*R, ex=b.x-ux*(R+4), ey=b.y-uy*(R+4);
+      const bend = (e.id==="Ac")?40:(e.id==="uA"?-30:0);
+      const cx=(sx+ex)/2 - uy*bend, cy=(sy+ey)/2 + ux*bend;
+      d=`M${sx},${sy} Q${cx},${cy} ${ex},${ey}`;
+      mx=(sx+2*cx+ex)/4; my=(sy+2*cy+ey)/4;
+    }
+    const col = e.s==="+"?"var(--blue)":"var(--red)";
+    h+=`<g class="g" data-loops="${e.loops.join(" ")}">
+      <path id="e-${e.id}" class="edge" d="${d}" marker-end="url(#arr)"/>
+      <circle class="polbg" cx="${mx}" cy="${my}" r="10"/><text class="pol" x="${mx}" y="${my}" fill="${col}">${e.s}</text>
+      <circle class="pulse" r="3.5"><animateMotion dur="${2.2+ (i%4)*0.35}s" repeatCount="indefinite" begin="${(i*0.37)%2}s"><mpath href="#e-${e.id}"/></animateMotion></circle>
+    </g>`;
+  });
+  Object.entries(NODES).forEach(([k,n])=>{
+    h+=`<g class="g node" data-node="${k}"><circle cx="${n.x}" cy="${n.y}" r="${R}"/>
+      <text class="sym" x="${n.x}" y="${n.y+2}">${n.s}</text><text class="nm" x="${n.x}" y="${n.y+20}">${n.n}</text></g>`;
+  });
+  svg.innerHTML=h;
+
+  const btns=document.getElementById("loopbtns"); const lt=document.getElementById("looptext");
+  const all=document.createElement("button"); all.textContent="All loops"; all.className="on"; btns.appendChild(all);
+  const set=(key,btn)=>{
+    btns.querySelectorAll("button").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
+    svg.querySelectorAll(".g").forEach(g=>g.classList.remove("hl"));
+    if(!key){ svg.classList.remove("focus"); lt.innerHTML="Three reinforcing loops push the gap wider. Only two balancing loops (decay of old output, natural fading of guilt) push back."; return; }
+    svg.classList.add("focus");
+    const nodes=new Set();
+    svg.querySelectorAll(".g[data-loops]").forEach(g=>{ if(g.dataset.loops.split(" ").includes(key)){ g.classList.add("hl");
+      const e=EDGES.find(x=>"e-"+x.id===g.querySelector("path").id); nodes.add(e.f); nodes.add(e.t);} });
+    svg.querySelectorAll(".node").forEach(g=>{ if(nodes.has(g.dataset.node)) g.classList.add("hl"); });
+    lt.innerHTML=`<b>${LOOPS[key].name}</b> <span class="badge ui">${LOOPS[key].kind}</span><br>${LOOPS[key].txt}`;
+  };
+  all.onclick=()=>set(null,all);
+  Object.keys(LOOPS).forEach(k=>{ const b=document.createElement("button"); b.textContent=LOOPS[k].name; b.onclick=()=>set(k,b); btns.appendChild(b); });
+  set(null,all);
+}
+
+/* ============================================================ 2. wasted years */
+function renderPre(D){
+  const t=[],R=[],A=[];
+  for(let i=0;i<=200;i++){ const s=P.h*i/200; t.push(s); R.push(P.zeta/P.gR*(Math.exp(P.gR*s)-1)); A.push(P.bphi/P.dA*(1-Math.exp(-P.dA*s))); }
+  Plotly.react("pre",[
+    {x:t,y:A,name:"output A(t)",line:{color:css("--blue"),width:2.5},hovertemplate:"%{y:.2f}"},
+    {x:t,y:R,name:"frontier R(t)",line:{color:css("--orange"),width:2.5},fill:"tonexty",fillcolor:"rgba(235,104,52,0.10)",hovertemplate:"%{y:.2f}"},
+  ], baseLayout({xaxis:{title:"years of history",gridcolor:css("--grid"),linecolor:css("--rule")},yaxis:{title:"units",gridcolor:css("--grid"),linecolor:css("--rule")},
+    annotations:[{x:P.h,y:(D.R0+D.A0)/2,text:`gap d₀ = ${D.d0.toFixed(1)}`,showarrow:false,xanchor:"right",font:{color:css("--ink"),size:13}}]}), CFG);
+}
+
+/* ============================================================ 3. surface */
+function renderSurf(D){
+  const hs=[],ps=[],z=[];
+  for(let i=0;i<=60;i++) hs.push(15*i/60);
+  for(let j=0;j<=45;j++) ps.push(1+9*j/45);
+  ps.forEach(p0=>z.push(hs.map(h=>p0/(1+(1+P.dA/P.gR)*(Math.exp(P.gR*h)-1)))));
+  const hc=ps.map(p0=>Math.log(1+(p0-1)*P.gR/(P.gR+P.dA))/P.gR);
+  const dark = css("--bg")!=="#f7f6f2";
+  Plotly.react("surf",[
+    {type:"surface",x:hs,y:ps,z,colorscale:[[0,dark?"#0f2a4d":"#dbe8f8"],[1,dark?"#7fb3f0":"#1c4f8f"]],showscale:false,opacity:0.95,
+      contours:{z:{show:true,usecolormap:false,color:css("--ink-3"),width:1,start:0,end:10,size:0.5}},
+      hovertemplate:"h = %{x:.1f} yr<br>Π₀ = %{y:.1f}<br>Π = %{z:.2f}<extra></extra>"},
+    {type:"surface",x:[0,15],y:[1,10],z:[[1,1],[1,1]],colorscale:[[0,css("--orange")],[1,css("--orange")]],showscale:false,opacity:0.35,hoverinfo:"skip"},
+    {type:"scatter3d",mode:"lines",x:hc.map(v=>Math.min(v,15)),y:ps,z:ps.map(()=>1.001),line:{color:dark?"#ffffff":"#ffffff",width:7},name:"critical history h_c",hoverinfo:"skip"},
+    {type:"scatter3d",mode:"markers+text",x:[P.h],y:[D.Pi0],z:[D.Pi],marker:{size:7,color:css("--orange"),line:{color:"#fff",width:2}},
+      text:["you"],textposition:"top center",textfont:{color:css("--ink"),size:13},name:"you",hovertemplate:"you: Π = %{z:.2f}<extra></extra>"},
+  ],{
+    paper_bgcolor:"rgba(0,0,0,0)",margin:{l:0,r:0,t:0,b:0},showlegend:false,
+    font:{family:"ui-sans-serif,-apple-system,sans-serif",color:css("--ink-2"),size:11},
+    scene:{xaxis:{title:"wasted years h",gridcolor:css("--grid"),backgroundcolor:"rgba(0,0,0,0)"},
+           yaxis:{title:"Π₀ = a/ζ",gridcolor:css("--grid")},
+           zaxis:{title:"race ratio Π",gridcolor:css("--grid")},
+           camera:{eye:{x:1.7,y:-1.5,z:0.9}}, aspectmode:"manual", aspectratio:{x:1.2,y:1,z:0.7}},
+    uirevision:"keep"
+  },CFG);
+}
+
+/* ============================================================ 4. phase portrait (animated particles) */
+const PH = {cmin:-30,cmax:20,Gmin:0,Gmax:6};
+const phase=document.getElementById("phase"), pctx=phase.getContext("2d");
+let particles=[], trajs=[], fpCache=[], PD=null, dpr=1;
+function sizePhase(){ dpr=window.devicePixelRatio||1; const r=phase.getBoundingClientRect();
+  phase.width=r.width*dpr; phase.height=r.height*dpr; }
+const pad={l:50,r:14,t:14,b:38};
+const X = c => (pad.l + (c-PH.cmin)/(PH.cmax-PH.cmin)*(phase.width/dpr-pad.l-pad.r))*dpr;
+const Y = G => (pad.t + (1-(G-PH.Gmin)/(PH.Gmax-PH.Gmin))*(phase.height/dpr-pad.t-pad.b))*dpr;
+const invX = x => PH.cmin + (x/dpr-pad.l)/(phase.width/dpr-pad.l-pad.r)*(PH.cmax-PH.cmin);
+const invY = y => PH.Gmin + (1-(y/dpr-pad.t)/(phase.height/dpr-pad.t-pad.b))*(PH.Gmax-PH.Gmin);
+function seed(){ return {c:PH.cmin+Math.random()*(PH.cmax-PH.cmin), G:PH.Gmin+Math.random()*(PH.Gmax-PH.Gmin), age:Math.random()*120|0}; }
+function initParticles(){ particles=Array.from({length:1400},seed); }
+let staticLayer=null;
+function buildStatic(){
+  staticLayer=document.createElement("canvas"); staticLayer.width=phase.width; staticLayer.height=phase.height;
+  const g=staticLayer.getContext("2d");
+  g.fillStyle=css("--surface"); g.fillRect(0,0,phase.width,phase.height);
+  // grid + axes
+  g.strokeStyle=css("--grid"); g.lineWidth=dpr; g.font=`${11*dpr}px ui-sans-serif,sans-serif`; g.fillStyle=css("--ink-2");
+  for(let c=-30;c<=20;c+=10){ g.beginPath(); g.moveTo(X(c),Y(PH.Gmin)); g.lineTo(X(c),Y(PH.Gmax)); g.stroke(); g.textAlign="center"; g.fillText(c,X(c),Y(0)+16*dpr); }
+  for(let G=0;G<=6;G+=1){ g.beginPath(); g.moveTo(X(PH.cmin),Y(G)); g.lineTo(X(PH.cmax),Y(G)); g.stroke(); g.textAlign="right"; g.fillText(G,X(PH.cmin)-8*dpr,Y(G)+4*dpr); }
+  g.strokeStyle=css("--ink-3"); g.setLineDash([4*dpr,4*dpr]); g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(0),Y(6)); g.stroke(); g.setLineDash([]);
+  g.textAlign="center"; g.fillText("gap c = A − R   (← behind the frontier  ·  ahead →)",X((PH.cmin+PH.cmax)/2),Y(0)+32*dpr);
+  g.save(); g.translate(14*dpr,Y(3)); g.rotate(-Math.PI/2); g.fillText("guilt G",0,0); g.restore();
+  // start marker d0
+  g.fillStyle=css("--ink-3"); g.textAlign="left"; g.fillText("start: −d₀",X(-PD.d0)+4*dpr,Y(PH.Gmax)+12*dpr);
+  g.strokeStyle=css("--ink-3"); g.beginPath(); g.moveTo(X(-PD.d0),Y(0)); g.lineTo(X(-PD.d0),Y(6)); g.stroke();
+}
+function nullclines(){
+  const ncc=[], ncg=[];
+  for(let i=0;i<=400;i++){
+    const c=PH.cmin+(PH.cmax-PH.cmin)*i/400;
+    const arg=(P.dA*c+PD.zeff)/(P.a*kappa(c,P));
+    ncc.push(arg>0&&arg<=1 ? [c,-Math.log(arg)/P.mu] : null);
+    const g=G=>P.gw*(1-P.n0*Math.exp(-P.mu*G))+P.ge*(1-Ehat(c,P))-P.gK*G;
+    let lo=0,hi=40; if(g(lo)<0){ncg.push(null);continue;}
+    for(let k=0;k<50;k++){const m=(lo+hi)/2; g(m)>0?lo=m:hi=m;} ncg.push([c,lo]);
+  }
+  return {ncc,ncg};
+}
+let NC=null;
+function drawCurve(ctx,pts,col,w){ ctx.strokeStyle=col; ctx.lineWidth=w*dpr; ctx.beginPath(); let pen=false;
+  pts.forEach(p=>{ if(!p||p[1]>PH.Gmax+0.5){pen=false;return;} pen?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1])); pen=true; }); ctx.stroke(); }
+function launch(c,G){
+  const pts=[[c,G]]; let x=[c,G];
+  for(let i=0;i<3000;i++){ x=rk4(v=>field(v[0],Math.max(v[1],0),P,PD),x,0.02); x[1]=Math.max(x[1],0);
+    pts.push([x[0],x[1]]); if(x[0]<PH.cmin-5||x[0]>PH.cmax+5) break; }
+  trajs.push(pts); if(trajs.length>8) trajs.shift();
+}
+phase.addEventListener("click",e=>{ const r=phase.getBoundingClientRect();
+  launch(invX((e.clientX-r.left)*dpr), Math.max(0,invY((e.clientY-r.top)*dpr))); });
+document.getElementById("clearTraj").onclick=()=>{trajs=[];};
+function phaseFrame(){
+  if(!staticLayer) return requestAnimationFrame(phaseFrame);
+  pctx.globalCompositeOperation="source-over";
+  pctx.globalAlpha=0.12; pctx.drawImage(staticLayer,0,0); pctx.globalAlpha=1;
+  // particles
+  const fc=css("--field");
+  pctx.fillStyle=`rgba(${fc},0.55)`;
+  const sx=(phase.width/dpr-pad.l-pad.r)/(PH.cmax-PH.cmin), sy=(phase.height/dpr-pad.t-pad.b)/(PH.Gmax-PH.Gmin);
+  for(const p of particles){
+    const f=field(p.c,p.G,P,PD); const vx=f[0]*sx, vy=f[1]*sy; const m=Math.hypot(vx,vy)||1;
+    const step=(0.6+1.6*Math.tanh(m/60))/m;
+    p.c+=f[0]*step; p.G+=f[1]*step; p.age++;
+    if(p.age>140||p.c<PH.cmin||p.c>PH.cmax||p.G<PH.Gmin||p.G>PH.Gmax) Object.assign(p,seed(),{age:0});
+    pctx.fillRect(X(p.c)-dpr,Y(p.G)-dpr,1.8*dpr,1.8*dpr);
+  }
+  // overlays (crisp)
+  drawCurve(pctx,NC.ncc,css("--blue"),2.2); drawCurve(pctx,NC.ncg,css("--orange"),2.2);
+  trajs.forEach(t=>{ drawCurve(pctx,t,css("--ink"),1.8); const s=t[0]; pctx.fillStyle=css("--ink"); pctx.beginPath(); pctx.arc(X(s[0]),Y(s[1]),3.5*dpr,0,7); pctx.fill(); });
+  fpCache.forEach(f=>{ if(f.c<PH.cmin||f.c>PH.cmax||f.G>PH.Gmax) return;
+    pctx.beginPath(); pctx.arc(X(f.c),Y(f.G),7*dpr,0,7);
+    pctx.lineWidth=2.5*dpr; pctx.strokeStyle=css("--surface");
+    if(f.type==="stable"){ pctx.fillStyle=css("--aqua"); pctx.fill(); pctx.stroke(); }
+    else { pctx.fillStyle=css("--surface"); pctx.fill(); pctx.strokeStyle=f.type==="saddle"?css("--red"):css("--violet"); pctx.stroke(); }
+  });
+  requestAnimationFrame(phaseFrame);
+}
+function renderPhase(D,fps){
+  PD=D; fpCache=fps; NC=nullclines(); sizePhase(); buildStatic(); pctx.drawImage(staticLayer,0,0);
+  trajs=[]; launch(-D.d0,0); launch(-D.d0,1.5); launch(-D.d0,3);
+  const trap=fps.find(f=>f.type==="stable"&&f.c<0), good=fps.find(f=>f.type==="stable"&&f.c>0), sad=fps.find(f=>f.type==="saddle");
+  let t="";
+  if(trap) t+=`<b>Guilt trap</b> at c = ${trap.c.toFixed(1)}, G = ${trap.G.toFixed(2)}: a stable resting point permanently behind the frontier. `;
+  if(good) t+=`<b>Catch-up state</b> at c = ${good.c.toFixed(1)}, G = ${good.G.toFixed(2)}. `;
+  if(sad)  t+=`The <b>saddle</b> at c = ${sad.c.toFixed(1)} is the watershed: start to its right with low guilt and you flow to catch-up; start to its left and you flow into the trap.`;
+  if(!good) t+=` At h = ${P.h} years the catch-up state no longer exists. Try lowering h, raising a, or lowering g<sub>e</sub> to bring it back.`;
+  document.getElementById("fpText").innerHTML=t;
+}
+window.addEventListener("resize",()=>{ if(PD){ sizePhase(); buildStatic(); } });
+
+/* ============================================================ 5. bifurcation */
+function renderBif(){
+  const S={x:[],y:[]},U={x:[],y:[]};
+  for(let h=0;h<=15.001;h+=0.1){
+    const p={...P,h}, D=derived(p);
+    fixedPoints(p,D).forEach(f=>{ const tgt=f.type==="stable"?S:U; tgt.x.push(h); tgt.y.push(f.c); });
+  }
+  Plotly.react("bif",[
+    {x:S.x,y:S.y,mode:"markers",name:"stable equilibrium",marker:{color:css("--aqua"),size:6},hovertemplate:"h=%{x:.1f}, c*=%{y:.1f}<extra>stable</extra>"},
+    {x:U.x,y:U.y,mode:"markers",name:"saddle (tipping point)",marker:{color:css("--surface"),size:6,line:{color:css("--red"),width:1.5}},hovertemplate:"h=%{x:.1f}, c*=%{y:.1f}<extra>saddle</extra>"},
+  ], baseLayout({hovermode:"closest",
+    xaxis:{title:"years of history h",gridcolor:css("--grid"),linecolor:css("--rule"),range:[0,15]},
+    yaxis:{title:"equilibrium gap c*",gridcolor:css("--grid"),linecolor:css("--rule"),zeroline:true,zerolinecolor:css("--ink-3")},
+    shapes:[{type:"line",x0:P.h,x1:P.h,yref:"paper",y0:0,y1:1,line:{color:css("--orange"),width:1.5,dash:"dot"}}],
+    annotations:[{x:P.h,yref:"paper",y:1,text:" you",showarrow:false,xanchor:"left",font:{color:css("--ink")}}]}),CFG);
+}
+
+/* ============================================================ 6. 3D trajectories */
+const G0S=[0,1,2,3,4];
+let traj3=[];
+function computeTraj3(D){
+  traj3=G0S.map(G0=>{ const t=[],c=[],G=[]; let x=[-D.d0,G0];
+    for(let i=0;i<=500;i++){ t.push(i*0.02*2); c.push(x[0]); G.push(x[1]);
+      for(let k=0;k<2;k++){ x=rk4(v=>field(v[0],Math.max(v[1],0),P,D),x,0.02); x[1]=Math.max(x[1],0);} }
+    return {t,c,G,G0}; });
+}
+function traces3(n){
+  const shades=["#b9d3f2","#7fb0e8","#3f86db","#1f5fae","#123a6b"];
+  const dark=css("--bg")!=="#f7f6f2"; const sh=dark?[...shades].reverse():shades;
+  return traj3.map((r,i)=>({type:"scatter3d",mode:"lines",x:r.t.slice(0,n),y:r.c.slice(0,n),z:r.G.slice(0,n),
+    line:{color:sh[i],width:6},name:`G₀ = ${r.G0}`,hovertemplate:`G₀=${r.G0}<br>t=%{x:.1f} yr<br>c=%{y:.1f}<br>G=%{z:.2f}<extra></extra>`}));
+}
+function renderTraj3(D){
+  computeTraj3(D);
+  Plotly.react("traj3d",traces3(501),{paper_bgcolor:"rgba(0,0,0,0)",margin:{l:0,r:0,t:0,b:0},
+    font:{family:"ui-sans-serif,-apple-system,sans-serif",color:css("--ink-2"),size:11},legend:{x:0,y:1},
+    scene:{xaxis:{title:"years of effort",gridcolor:css("--grid")},yaxis:{title:"gap c",gridcolor:css("--grid")},zaxis:{title:"guilt G",gridcolor:css("--grid")},
+      camera:{eye:{x:1.6,y:1.6,z:0.8}},aspectratio:{x:1.4,y:1,z:0.7},aspectmode:"manual"},uirevision:"keep"},CFG);
+}
+let anim3=null;
+document.getElementById("play3d").onclick=()=>{ if(anim3) cancelAnimationFrame(anim3); let n=2;
+  const step=()=>{ n+=6; Plotly.react("traj3d",traces3(n),document.getElementById("traj3d").layout); if(n<501) anim3=requestAnimationFrame(step); }; step(); };
+
+/* ============================================================ 7. race */
+let raceData=[];
+function renderRace(D,upto){
+  const G0=+document.getElementById("g0").value;
+  raceData=simulateRace(P,D,G0,10);
+  const n=upto??raceData.length;
+  const d=raceData.slice(0,n);
+  const tt=d.map(p=>p.t);
+  Plotly.react("race",[
+    {x:tt,y:d.map(p=>p.A),name:"your output A",line:{color:css("--blue"),width:2.5},hovertemplate:"%{y:.1f}"},
+    {x:tt,y:d.map(p=>p.R),name:"frontier R",line:{color:css("--orange"),width:2.5},hovertemplate:"%{y:.1f}"},
+  ], baseLayout({
+    xaxis:{title:"years (0 = effort begins)",gridcolor:css("--grid"),linecolor:css("--rule"),range:[-P.h-0.2,10.2]},
+    yaxis:{title:"units",gridcolor:css("--grid"),linecolor:css("--rule"),range:[0,Math.max(...raceData.map(p=>p.R))*1.05]},
+    shapes:[{type:"rect",x0:-P.h,x1:0,yref:"paper",y0:0,y1:1,fillcolor:css("--ink-3"),opacity:0.08,line:{width:0}}],
+    annotations:[{x:-P.h/2,yref:"paper",y:0.97,text:"wasted years",showarrow:false,font:{color:css("--ink-2")}},
+                 {x:5,yref:"paper",y:0.97,text:"effort years",showarrow:false,font:{color:css("--ink-2")}}]}),CFG);
+}
+let animR=null;
+document.getElementById("playRace").onclick=()=>{ if(animR) cancelAnimationFrame(animR); const D=derived(P); let n=1;
+  const step=()=>{ n+=6; renderRace(D,n); if(n<raceData.length) animR=requestAnimationFrame(step); }; step(); };
+document.getElementById("g0").oninput=e=>{ document.getElementById("g0o").textContent=e.target.value; renderRace(derived(P)); };
+
+/* ============================================================ 8. controllability */
+function renderCtrl(D){
+  const T=[],rho=[]; let best={T:0,r:Infinity};
+  for(let i=1;i<=300;i++){ const t=i*0.1;
+    const target=P.zeta/P.gR*(Math.exp(P.gR*(P.h+t))-1);
+    const Delta=target-Math.exp(-P.dA*t)*D.A0;
+    const r=2*Delta/(P.a*t*(1+Math.exp(-P.dA*t)));
+    T.push(t); rho.push(r); if(r<best.r) best={T:t,r};
+  }
+  const feasible=best.r<=1;
+  Plotly.react("ctrl",[
+    {x:T,y:rho,name:"feasibility ratio ρ(T)",line:{color:css("--blue"),width:2.5},hovertemplate:"T=%{x:.1f} yr, ρ=%{y:.2f}<extra></extra>"},
+    {x:[best.T],y:[best.r],mode:"markers",name:"best horizon",marker:{color:css("--orange"),size:10,line:{color:css("--surface"),width:2}},hovertemplate:"best T=%{x:.1f}, ρ=%{y:.2f}<extra></extra>"},
+  ], baseLayout({hovermode:"closest",
+    xaxis:{title:"horizon T (years of effort)",gridcolor:css("--grid"),linecolor:css("--rule")},
+    yaxis:{title:"ρ(T)  (≤ 1 means parity is reachable)",type:"log",gridcolor:css("--grid"),linecolor:css("--rule")},
+    shapes:[{type:"line",xref:"paper",x0:0,x1:1,y0:1,y1:1,line:{color:css("--aqua"),width:2,dash:"dash"}},
+            {type:"line",x0:1/P.gR,x1:1/P.gR,yref:"paper",y0:0,y1:1,line:{color:css("--ink-3"),width:1,dash:"dot"}}],
+    annotations:[{x:1/P.gR,yref:"paper",y:1,text:" T* = 1/g_R",showarrow:false,xanchor:"left",font:{color:css("--ink-2")}},
+      {xref:"paper",x:1,y:Math.log10(Math.max(best.r*1.6,1.3)),text:feasible?`Parity reachable at T ≈ ${best.T.toFixed(1)} yr`:`Best case ρ = ${best.r.toFixed(2)}: parity out of reach`,
+       showarrow:false,xanchor:"right",font:{color:css("--ink"),size:13}}]}),CFG);
+}
+
+/* ============================================================ params table */
+function renderTable(){
+  document.getElementById("ptable").innerHTML="<tr><th>parameter</th><th>value</th><th>meaning</th></tr>"+
+    Object.entries(P).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td><td>${PARAM_DOC[k]||""}</td></tr>`).join("");
+}
+
+/* ============================================================ render */
+function renderAll(){
+  const D=derived(P), fps=fixedPoints(P,D);
+  renderTiles(D,fps); renderPre(D); renderSurf(D); renderPhase(D,fps); renderBif(); renderTraj3(D); renderRace(D); renderCtrl(D); renderTable();
+}
+drawCLD(); initParticles(); renderAll(); requestAnimationFrame(phaseFrame);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>renderAll());
+</script>
+</body>
+</html>
